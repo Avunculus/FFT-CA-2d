@@ -1,5 +1,5 @@
 import pygame as pg
-
+import numpy as np
 # 0. get D.w, D.h
 # 1. choose sq|hex_ft|hex_pt
 # 2. choose scale
@@ -38,7 +38,7 @@ class ToggleBox(pg.Rect):
         ...
 
 class TextField(pg.Rect):
-    def __init__(self, origin:tuple, ):
+    def __init__(self, origin:tuple):
         ...
 
 class Menu(pg.Rect): # contains, draws label-field pairs. Field = textRect|binary boxes
@@ -52,4 +52,69 @@ class TextInput(pg.Rect):
         fields: [0] label text, [1] default txt, [2] min (val or length), [3] max"""
 
         ...
-m = Menu(('Game code', TextField()))
+
+def decode_game_string(code:str) -> tuple[np.ndarray,np.ndarray]:
+    """Returns: 2-tuple of arrays:: [0]: kernel/ngb mask (c, r); [1]: rule array (2, n)"""
+    # in: key is decimal or in 'xqvm, -gnbs'
+    code = code.casefold().replace(' ', '')
+    # each key once
+    for key in 'gnbs':
+        if code.count(key) != 1:
+            print(f'game string code error: \'{key}\' present {code.count(key)} times') 
+            return False
+    # keys in order
+    if not code.index('g') < code.index('n') < code.index('b') < code.index('s'):
+        print(f'error: game code string args out of order: \'{code})\'')
+        return False
+    # EX: 'gx,nv2,b1,2,4-8,s10-11,13'
+    grid, ngbhd, b_s = code.split(',', maxsplit=2)
+    ngbhd, scope = (ngbhd[1], int(ngbhd[2:])) # ngbhd='v' or 'm'
+    # kernel.shape, kernel.values, rule.shape
+    match grid[-1]:
+        case 'q':
+            kernel = np.ones((2 * scope + 1,
+                              2 * scope + 1))
+            kernel[scope, scope] = 0
+            if ngbhd == 'm': # moore ngbhd: adj + diag
+                rule = np.zeros((2, kernel.size))
+            elif ngbhd == 'v':
+                rule = np.zeros((2, 2 * scope * (scope + 1) + 1))
+                with np.nditer(kernel, flags=['multi_index'], op_flags=['readwrite']) as it:
+                    for _ in it:
+                        if abs(scope - it.multi_index[0]) + abs(scope - it.multi_index[1]) > scope:
+                            kernel[it.multi_index] = 0 
+            else: return False
+        case 'x':
+            if ngbhd == 'v': 
+                kernel = np.zeros((3 + 2 * (scope - 1),
+                                   5 + 4 * (scope - 1))) # default flat-top hexes. For pt, use k.T
+                center = (kernel.shape[0] // 2, kernel.shape[1] // 2)
+                ... # ??? kernel for n>1-degree neighbors ???
+                rule = np.zeros((2, 3 * scope * (scope + 1) + 1))
+            elif ngbhd == 'm':
+                print('error: \'m\' (Moore) neighborhood requested for hex grid')
+                return False
+            else: return False
+        case _: print('error: invalid grid type'); return False
+    # rule.values
+    for i, vals in enumerate(b_s[1:].split(',s')):
+        for ix in vals.split(','):
+            if '-' not in ix:
+                ix = int(ix)
+                if ix > rule.shape[1] - 1:
+                    print(f'error: rule out of bounds: index = {ix}, {rule.shape[1]= }')
+                    return False
+                else:
+                    rule[i, ix] = 1
+            else:
+                lo, hi = [int(j) for j in ix.split('-')]
+                if int(hi) > rule.shape[1] - 1:
+                    print(f'error: rule out of bounds: index = {hi}, {rule.shape[1]= }')
+                    return False
+                else:
+                    rule[i, int(lo) : int(hi) + 1] = 1
+    return (kernel, rule)
+
+# k, r = decode_game_string('gq,nm5,b5,s2,3')
+# print(k)
+# print(r)

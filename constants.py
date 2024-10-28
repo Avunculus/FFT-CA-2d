@@ -23,7 +23,9 @@ STD_MASK = np.array([[1, 1, 1], # 'Moore' ngbhd
 DBL_MASK_FT = np.array([[0, 1, 0, 1, 0], # = pt_mask.T
                         [1, 0, 0, 0, 1],
                         [0, 1, 0, 1, 0]])
+np.diag
 DBL_MASK_PT = DBL_MASK_FT.T
+
 
 def get_ngb_mask(shape:tuple, doubled:bool, ft:bool=True) -> np.ndarray:
     m, n = shape
