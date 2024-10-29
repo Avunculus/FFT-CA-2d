@@ -1,4 +1,7 @@
 from constants import *
+from tools import * 
+from gui import *
+from string import digits
 
 def convolve2d(arr0:np.ndarray, arr1:np.ndarray) -> np.ndarray:
     func1 = np.fft.fft2(arr0)
@@ -8,8 +11,8 @@ def convolve2d(arr0:np.ndarray, arr1:np.ndarray) -> np.ndarray:
     convolved = np.roll(convolved, (- int(m / 2) + 1, - int(n / 2) + 1), axis=(0, 1))
     return convolved
 
-def fft_flip(cells:np.ndarray, ngb_mask:np.ndarray, rule:np.ndarray) -> np.ndarray:
-    ngb_sum = convolve2d(cells, ngb_mask).round()
+def fft_flip(cells:np.ndarray, kernel:np.ndarray, rule:np.ndarray) -> np.ndarray:
+    ngb_sum = convolve2d(cells, kernel).round()
     new_cells = np.zeros(ngb_sum.shape)
     for i in np.nonzero(rule[0, :]):
         for j in i:
@@ -29,105 +32,101 @@ def show(sfc:pg.Surface, cells:np.ndarray, bg_image:pg.Surface=None) -> None:
     pg.surfarray.blit_array(img, cells * (color - bg_color) + bg_color)
     img = pg.transform.scale(img, sfc.get_size())
     sfc.blit(img, (0, 0))
-    if bg_image:
+    if bg_image: # top layer to cover dbld
         sfc.blit(bg_image, (0, 0))
 
 def get_user_args():
-    """
-    From: system (display dimensions) & user text input 
-    Returns: (cols: int, rows: int, scale_x: int, scale_y: int, doubled: bool)
-    """
-    # for update:
-    # FIELD           VAL_RANGE                       DEFAULT                         DEPEND.
-    # =============   ==========================      ==========================      =======================================
-    # grid_type       square, hex_ft, hex_pt          hex_ft                          --
-
-    # grid_shape      hex: ([6->D.w], [6->D.h])       hex_ft: (D.w//5, D.h//3)        grid_type, D.w, D.h
-    #                 sq:  ([3->D.w], [3->D.h])       hex_pt: (D.w//3, D.h//5)    
-
-    # scale           min = (1, 1)                    hex_ft: (5, 3); hex_pt: (3, 5)  grid_shape, grid_type, D.w, D.h 
-    #                 max = D.w//cols, D.h//rows      square: (4, 4)
-
-    # hood_type       VonNeuman (adj. ngbs only),     hex: VonNeuman (required)       grid_type
-    #                 Moore (adj. and diag. ngbs)     square: Moore (can be either)
-
-    # hood_magnitude  int [1->min([D.w, D.h])//2]     1                               D.w, D.h
-
-    # rule            shape = (2, hood_size + 1)      B3/S23                          hood_mag., hood_type, etc.
-    #                 val_range = 0|1
-    
-    win  = pg.display.set_mode((960, 540), flags=pg.NOFRAME)
-    font = pg.font.SysFont('couriernew', FH, bold=True)
-    names    = ['cols', 'rows', 'scale_x', 'scale_y', 'doubled']
-    types =    [ int     ,  int     ,  int  ,  int  ,  int    ]
-    defaults = [str(1920 // 5), str(1080 // 3), '5', '3', '1']
-    ui = {arg_name: ArgField((12, 12 + i * FH), defaults[i], font, arg_name, COLORS[-2 :]) for i, arg_name in enumerate(names)}
-    target = 'scale_x'
-    [r.draw(win, n==target) for n, r in ui.items()]
+    # page 1: Game; page 2: View
+    ## declare page sfc, populate / draw
+    menu = (
+        Menu(TextField('game code', digits + 'XxQqVvMm,-GgNnBbSs', 'Gx,Nv1,B3,S2,3', 64),
+             ChoiceField('grid', ['hexagon', 'square']),
+             ChoiceField('neighborhood', ['VonNeuman', 'Moore']),
+             TextField('neighbor range', digits, '1', 1),
+             TextField('birth', digits + ',-', '3', 64),
+             TextField('survival', digits + ',-', '2,3', 64)),
+        Menu(ChoiceField('orientation', ['flat-top', 'pointy-top']),
+             TextField('scale view', digits, '1', 2))
+        )
+    # view scale (int) scales both xy for basis (4,4) [sq], (5,3) [hex-ft], (3,5) [hex-pt]
+    page = 0
+    win = pg.display.set_mode(menu[page].size)
+    menu[page].win = win
+    menu[page].draw_all()
     clock = pg.time.Clock()
     running = True
     while running :
         clock.tick(FPS)
         for event in pg.event.get():
             match event.type:
-                case pg.QUIT:
-                    return False
                 case pg.TEXTINPUT:
-                    if event.text.isnumeric() and target:
-                        ui[target].add_char(event.text)
-                        [r.draw(win, n==target) for n, r in ui.items()]
+                    menu[page].add_char(event.text)
                 case pg.MOUSEBUTTONDOWN:
-                    target = ''
-                    for key in [n for n, r in ui.items() if r.collidepoint(event.pos)]:
-                        target = key
-                    [r.draw(win, n==target) for n, r in ui.items()]
+                    menu[page].click(event.pos)
                 case pg.KEYDOWN:
                     match event.key:
+                        case pg.K_TAB:
+                            menu[page].cycle_fields(-1) if event.mod & pg.KMOD_SHIFT \
+                            else menu[page].cycle_fields(1) 
                         case pg.K_UP:
-                            target = names[names.index(target) - 1]
-                            [r.draw(win, n==target) for n, r in ui.items()]
+                            menu[page].cycle_fields(-1) 
                         case pg.K_DOWN:
-                            target = names[(names.index(target) + 1) % len(names)]
-                            [r.draw(win, n==target) for n, r in ui.items()]
+                            menu[page].cycle_fields(1)
+                        case pg.K_LEFT | pg.K_RIGHT:
+                            menu[page].cycle_choice(event.key % 2)
                         case pg.K_ESCAPE:
-                            if target:
-                                ui[target].arg_val = '0'
-                                [r.draw(win, n==target) for n, r in ui.items()]
-                        case pg.K_BACKSPACE:
-                            if target:
-                                ui[target].del_char()
-                                [r.draw(win, n==target) for n, r in ui.items()]
+                            menu[page].reset_field()
+                        case pg.K_DELETE | pg.K_BACKSPACE:
+                            menu[page].clear_field()
                         case pg.K_q:
                             if event.mod & pg.KMOD_CTRL:
                                 return False
                         case pg.K_RETURN | pg.K_KP_ENTER:
-                            cols, rows, scale_x, scale_y, doubled = [types[names.index(n)](r.arg_val) for n, r in ui.items()]
-                            doubled = bool(doubled)
-                            disp_w, disp_h = pg.display.get_desktop_sizes()[0]  # check fit to display max
-                            if cols >= 6 and cols * scale_x <= disp_w and rows >= 6 and rows * scale_y <= disp_h: # min 6x6
-                                if doubled:
-                                    cols -= cols % 2 # chck even #s?
-                                    rows -= rows % 2
-                                pg.display.quit()
-                                return (cols, rows, scale_x, scale_y, doubled)
+                            if page == 0:
+                                if menu[page].fields.index(menu[page].focus) == 0: # full code
+                                    result = decode_game_string(menu[page].fields[0].text)
+                                else: # part-wise
+                                    result = decode_game_string(parts_to_code([r.text for r in menu[page].fields[1:]])) 
+                                if isinstance(result, tuple): # accept game args
+                                    kernel, rule = result
+                                    doubled = kernel.shape[0] != kernel.shape[1] 
+                                    page = 1
+                                    win = pg.display.set_mode(menu[page].size)
+                                    menu[page].win = win
+                                    menu[page].draw_all()
+                            else: # xc view args: need appoved grid, scale_x and scale_y
+                                scale = (5, 3) if doubled else (4, 4)
+                                if menu[page].fields[0].text == 'pointy-top': scale = (3, 5)
+                                factor = int(menu[page].fields[1].text)
+                                scale = (factor * scale[0], factor * scale[1])
+                                cols = MAX_W // scale[0]
+                                cols -= cols % 2
+                                rows = MAX_H // scale[1]
+                                rows -= rows % 2
+                                if cols >= 6 and rows >= 6:
+                                    grid = np.random.random((cols, rows)).round()
+                                    pg.display.quit()
+                                    return (grid, kernel, rule, scale[0], scale[1])
         pg.display.update()
 
-def main(args):
-    cols, rows, scale_x, scale_y, doubled = args
-    shape = (cols, rows)
-    rez = (cols * scale_x, rows * scale_y)
 
-    grid = np.random.random(shape).round()
-    ngbs = get_ngb_mask(shape, doubled) # set ngbs from doubled + MASK + shape
-    rule = RULE_CLASSIC # now @ constant; space for input rule_key/ui for toggle rects
+def main(args:tuple[np.ndarray, np.ndarray, np.ndarray, int, int]):
 
-    bg_img = make_bg(shape, (scale_x, scale_y)) if doubled else None
+    grid, kernel, rule, scale_x, scale_y = args
+
+    # adjust kernel so k.shape = g.shape!
+    # OLD: ngbs = get_ngb_mask(shape, doubled) # set ngbs from doubled + MASK + shape
+
+    doubled = kernel.shape[0] != kernel.shape[1] 
+
+    rez = (grid.shape[0] * scale_x, grid.shape[1] * scale_y)
+    # grid = np.random.random(shape).round()
+    bg_img = make_bg(grid.shape, (scale_x, scale_y)) if doubled else None
     win = pg.display.set_mode(rez, flags=pg.NOFRAME)
     show(win, grid.astype(np.int64), bg_img)
     clock = pg.time.Clock()
     autoflip = False
     running = True
-
     while running:
         clock.tick(FPS)
         for event in pg.event.get():
@@ -139,22 +138,22 @@ def main(args):
                         case pg.K_q: # quit
                             if event.mod & pg.KMOD_CTRL:
                                 return False
-                        case pg.K_n: # new grid
+                        case pg.K_n: # new game
                             if event.mod & pg.KMOD_CTRL:
                                 pg.display.quit()
                                 return True
                         case pg.K_r: # re-set, randomize
                             if event.mod & pg.KMOD_CTRL: 
                                 autoflip = False
-                                grid = np.random.random(shape).round()
+                                grid = np.random.random(grid.shape).round()
                                 show(win, grid.astype(np.int64), bg_img)
                         case pg.K_SPACE:
                             autoflip = not autoflip
                         case pg.K_RIGHT:
-                            grid = fft_flip(grid, ngbs, rule)
+                            grid = fft_flip(grid, kernel, rule)
                             show(win, grid.astype(np.int64), bg_img)
         if autoflip: # advance 1 gen 
-            grid = fft_flip(grid, ngbs, rule) 
+            grid = fft_flip(grid, kernel, rule) 
             show(win, grid.astype(np.int64), bg_img)
         pg.display.update()
 

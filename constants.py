@@ -2,11 +2,19 @@ import hexonia as hx
 import pygame as pg
 import numpy as np
 pg.font.init()
+pg.display.init()
+MAX_W, MAX_H = pg.display.get_desktop_sizes()[0]
+BF = 4
 FH = 24
 FPS = 60
+FONT = font=pg.font.SysFont('couriernew', FH, bold=True)
 
-COLORS = (pg.Color( 53,  53,  53), 
-          pg.Color(219,  31, 187))
+COLORS = (pg.Color( 53,  53,  53), # cell @ 0
+          pg.Color(219,  31, 187), # cell @ 1
+          pg.Color(2,  31, 247), # font fg 1
+          pg.Color(75,  130, 227), # font fg 2
+          pg.Color(111,  0, 34), # font bg 1
+          pg.Color(180,  180, 187)) # font bg 2
 
 RULE_CLASSIC = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0],
                          [0, 0, 1, 1, 0, 0, 0, 0, 0]])
@@ -23,9 +31,7 @@ STD_MASK = np.array([[1, 1, 1], # 'Moore' ngbhd
 DBL_MASK_FT = np.array([[0, 1, 0, 1, 0], # = pt_mask.T
                         [1, 0, 0, 0, 1],
                         [0, 1, 0, 1, 0]])
-np.diag
 DBL_MASK_PT = DBL_MASK_FT.T
-
 
 def get_ngb_mask(shape:tuple, doubled:bool, ft:bool=True) -> np.ndarray:
     m, n = shape
