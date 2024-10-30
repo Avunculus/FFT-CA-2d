@@ -124,7 +124,7 @@ def decode_game_string(code:str) -> tuple[np.ndarray,np.ndarray]:
         case _: print('error: invalid grid type'); return False
     # rule.values
     for i, line in enumerate(b_s[1:].split(',s')):
-        for ix in line.split(','):
+        for ix in line.split(',') if ',' in line else [line]:
             if '-' not in ix:
                 ix = int(ix)
                 if ix > rule.shape[1] - 1:
