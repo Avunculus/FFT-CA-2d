@@ -96,32 +96,38 @@ def get_user_args():
                                     menu[page].draw_all()
                             else: # xc view args: need appoved grid, scale_x and scale_y
                                 scale = (5, 3) if doubled else (4, 4)
-                                if menu[page].fields[0].text == 'pointy-top': scale = (3, 5)
+                                if menu[page].fields[0].text == 'pointy-top':
+                                    scale = (3, 5)
+                                    kernel = np.transpose(kernel)
+                                print(f'kernel:\n{kernel}')
                                 factor = int(menu[page].fields[1].text)
                                 scale = (factor * scale[0], factor * scale[1])
                                 cols = MAX_W // scale[0]
                                 cols -= cols % 2
                                 rows = MAX_H // scale[1]
                                 rows -= rows % 2
-                                if cols >= 6 and rows >= 6:
+                                as_hex = kernel.shape[0] != kernel.shape[1] 
+                                if cols >= 6 and rows >= 6: # declare grid, pad kernel
                                     grid = np.random.random((cols, rows)).round()
+                                    after0 = (cols - kernel.shape[0]) // 2
+                                    before0 = cols - kernel.shape[0] - after0
+                                    after1 = (rows - kernel.shape[1]) // 2
+                                    before1 = rows - kernel.shape[1] - after1
+                                    kernel = np.pad(kernel, ((before0, after0), (before1, after1)))
+                                    print(f'kernel padding: ({before0}, {after0}), ({before1}, {after1})')
+                                    print(f'{kernel.shape= } / {grid.shape= }')
                                     pg.display.quit()
-                                    return (grid, kernel, rule, scale[0], scale[1])
+                                    return (grid, kernel, rule, scale[0], scale[1], as_hex)
         pg.display.update()
 
 
 def main(args:tuple[np.ndarray, np.ndarray, np.ndarray, int, int]):
 
-    grid, kernel, rule, scale_x, scale_y = args
-
-    # adjust kernel so k.shape = g.shape!
-    # OLD: ngbs = get_ngb_mask(shape, doubled) # set ngbs from doubled + MASK + shape
-
-    doubled = kernel.shape[0] != kernel.shape[1] 
-
+    grid, kernel, rule, scale_x, scale_y, as_hex = args
     rez = (grid.shape[0] * scale_x, grid.shape[1] * scale_y)
+    print(f'{rez= }')
     # grid = np.random.random(shape).round()
-    bg_img = make_bg(grid.shape, (scale_x, scale_y)) if doubled else None
+    bg_img = make_bg(grid.shape, (scale_x, scale_y)) if as_hex else None
     win = pg.display.set_mode(rez, flags=pg.NOFRAME)
     show(win, grid.astype(np.int64), bg_img)
     clock = pg.time.Clock()

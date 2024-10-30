@@ -95,9 +95,9 @@ def decode_game_string(code:str) -> tuple[np.ndarray,np.ndarray]:
             kernel = np.ones((2 * scope + 1,
                               2 * scope + 1))
             kernel[scope, scope] = 0
-            if ngbhd == 'm': # moore ngbhd: adj + diag
+            if ngbhd == 'm': # square moore ngbhd: adj + diag
                 rule = np.zeros((2, kernel.size))
-            elif ngbhd == 'v':
+            elif ngbhd == 'v': # square vn 
                 rule = np.zeros((2, 2 * scope * (scope + 1) + 1))
                 with np.nditer(kernel, flags=['multi_index'], op_flags=['readwrite']) as it:
                     for _ in it:
@@ -105,11 +105,17 @@ def decode_game_string(code:str) -> tuple[np.ndarray,np.ndarray]:
                             kernel[it.multi_index] = 0 
             else: return False
         case 'x':
-            if ngbhd == 'v': 
-                kernel = np.zeros((3 + 2 * (scope - 1),
-                                   5 + 4 * (scope - 1))) # default flat-top hexes. For pt, use k.T
-                center = (kernel.shape[0] // 2, kernel.shape[1] // 2)
-                ... # ??? kernel for n>1-degree neighbors ???
+            if ngbhd == 'v': # hex vn 
+                shape = (1 + 2 * scope, 1 + 4 * scope)
+                kernel = np.zeros(shape) # default flat-top hexes. For pt, use k.T
+                origin = shape[0] // 2
+                for q in range(scope): # center line: omit target (center cell)
+                    kernel[origin, 2 * q] = 1
+                    kernel[origin, -1 - 2 * q] = 1
+                for ofst in range(1, scope + 1): # lines above & below
+                    line = np.array([1, 0] * (shape[0]-ofst))
+                    kernel[origin - ofst, ofst: ofst + line.size] = line
+                    kernel[origin + ofst, ofst: ofst + line.size] = line
                 rule = np.zeros((2, 3 * scope * (scope + 1) + 1))
             elif ngbhd == 'm':
                 print('error: \'m\' (Moore) neighborhood requested for hex grid')
@@ -117,8 +123,8 @@ def decode_game_string(code:str) -> tuple[np.ndarray,np.ndarray]:
             else: return False
         case _: print('error: invalid grid type'); return False
     # rule.values
-    for i, vals in enumerate(b_s[1:].split(',s')):
-        for ix in vals.split(','):
+    for i, line in enumerate(b_s[1:].split(',s')):
+        for ix in line.split(','):
             if '-' not in ix:
                 ix = int(ix)
                 if ix > rule.shape[1] - 1:
@@ -134,7 +140,3 @@ def decode_game_string(code:str) -> tuple[np.ndarray,np.ndarray]:
                 else:
                     rule[i, int(lo) : int(hi) + 1] = 1
     return (kernel, rule)
-
-# k, r = decode_game_string('gq,nm5,b5,s2,3')
-# print(k)
-# print(r)
