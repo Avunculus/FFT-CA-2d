@@ -1,7 +1,8 @@
-Gq,Nm5,B34-45,S33-57    ||  Bosco's Rule
-Gq,Nm1,B1,S0-8          ||  H-Trees
+Gq,Nm5,B34-45,S33-57    || Bosco's Rule
+Gq,Nm1,B1,S0-8          || H-Trees
 Gq,Nm1,B1,S0,1,4-7      || Fuzz
 Gq,Nm1,B1,S1            || Gnarl
 Gq,Nm1,B0,2,8,S0,1,2,4  || Invertamaze
 Gq,Nm1,B2,5-8,S5-8      || Iceballs
 Gq,Nm1,B3-5,S4-7        || Assimilation
+Gx,Nv3,B3-13,S2,3       || Hexamoeba

@@ -36,7 +36,7 @@ class TextField(pg.Rect):
 HELP_TEXT = ['MENU: Input game code, choose from saved games, or input game attributes, then press [enter] to proceed.',
              '      Use mouse or keys [up/down/left/right/tab] to navigate. Press [del] to clear field, [esc] for default.',
              'GAME: [ctrl + q]: quit || [ctrl + r]: randomize || [ctrl + c]: clear || [ctrl + n]: new game',
-             '      [spc]: (un)pause || [right]: advance one turn']
+             '      [spc]: (un)pause || [right]: advance one turn || [left click]: toggle cell']
 
 class Menu(pg.Rect):
     # container for filedrects, determines total sfc size, navigates focus, manages draws
@@ -61,15 +61,12 @@ class Menu(pg.Rect):
         self.feedback = HELP_TEXT.copy()
         self.msg_area = pg.Rect(self.fields[-1].bottomleft, self.bottomright)
         self.win:pg.Surface = None
-
     def reset_field(self) -> None:
         self.focus.reset()
         self.update_fields()
-
     def clear_field(self) -> None:
         self.focus.clear()
         self.update_fields()
-
     def draw_all(self):
         self.win.fill('black')
         [self.win.fill(COLORS[5] if r==self.focus else COLORS[4], r) for r in self.fields]
@@ -77,34 +74,28 @@ class Menu(pg.Rect):
                        [(FONT.render(r.text, 1, COLORS[3]), r) for r in self.fields])
         [pg.draw.line(self.win, 'red', p0, p1) for p0, p1 in self.breaks]
         self.report()
-
     def update_fields(self) -> None:
         [self.win.fill(COLORS[5] if r==self.focus else COLORS[4], r) for r in self.fields]
         self.win.blits([(FONT.render(r.text, 1, COLORS[3]), r) for r in self.fields])
         self.report()
-
     def report(self, line:str='') -> None:
         if line: self.feedback = [line, self.feedback[1]]
         self.win.fill('black', self.msg_area)
-        self.win.blits([(FONT_SMALL.render(line, 1, 'green', 'black'), (BF, self.bottom - BF - i * self.field_h)) \
+        self.win.blits([(FONT_SMALL.render(line, 1, 'green', 'black'), (BF, self.bottom - (i + 1) * (BF + self.field_h))) \
                         for i, line in enumerate(reversed(self.feedback))])
-        
     def click(self, pos:tuple):
         for rect in [r for r in self.fields if r.collidepoint(pos)]:
             self.focus = rect
             self.update_fields()
-
     def cycle_choice(self, step:int) -> None:
         step = -1 if step == 0 else 1
         if isinstance(self.focus, ChoiceField):
             self.focus.cycle(step)
             self.update_fields()
         self.update_fields()
-
     def cycle_fields(self, step:int) -> None:
         self.focus = self.fields[(self.fields.index(self.focus) + step) % len(self.fields)]
         self.update_fields()
-
     def add_char(self, char):
         if isinstance(self.focus, TextField):
             self.focus.add_char(char)

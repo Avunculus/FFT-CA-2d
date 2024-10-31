@@ -24,7 +24,7 @@ def fft_flip(cells:np.ndarray, kernel:np.ndarray, rule:np.ndarray) -> np.ndarray
     # new_cells[np.where((ngb_sum == 3) & (cells == 0))] = 1
     return new_cells
 
-def show(sfc:pg.Surface, cells:np.ndarray, bg_image:pg.Surface=None) -> None:
+def show(sfc:pg.Surface, cells:np.ndarray, game_key:pg.Surface, bg_image:pg.Surface=None) -> None:
     img = pg.Surface(cells.shape)
     color = img.map_rgb(COLORS[1])
     bg_color = img.map_rgb(COLORS[0])
@@ -33,7 +33,16 @@ def show(sfc:pg.Surface, cells:np.ndarray, bg_image:pg.Surface=None) -> None:
     sfc.blit(img, (0, 0))
     if bg_image: # top layer to cover dbld
         sfc.blit(bg_image, (0, 0))
+    sfc.blit(game_key, (BF, BF))
 
+def pad_to_fit(arr:np.ndarray, shape:tuple) -> np.ndarray:
+    cols, rows = shape
+    after0 = (cols - arr.shape[0]) // 2
+    before0 = cols - arr.shape[0] - after0
+    after1 = (rows - arr.shape[1]) // 2
+    before1 = rows - arr.shape[1] - after1
+    return np.pad(arr, ((before0, after0), (before1, after1)))
+    
 SAVES = {}
 with open('game-codes.txt', mode='r', encoding='utf-8') as sv:
     for line in sv.readlines():
@@ -58,7 +67,7 @@ def get_user_args():
              TextField('survival rule', digits + ',-', '2,3', 64),
              break_before=(1, 2)),
         Menu(ChoiceField('orientation', ['flat-top', 'pointy-top']),
-             TextField('scale view', digits, '1', 2))
+             ChoiceField('scale view', [repr(i) for i in range(1, 7)]))
         ) # view scale (int) scales both xy for basis (4,4) [sq], (5,3) [hex-ft], (3,5) [hex-pt]
     page = 0
     win = pg.display.set_mode(menu[page].size)
@@ -111,8 +120,10 @@ def get_user_args():
                                     menu[page].win = win
                                     if not doubled:
                                         menu[1].fields[0].choices.remove('pointy-top')
-                                    menu[page].report('Code: ' + game_str)
+                                    menu[page].feedback = ('', '')
                                     menu[page].draw_all()
+                                    if menu[0].fields.index(menu[0].focus) == 1: # loaded from file: prepend filename
+                                        game_str = menu[0].fields[1].text + ': ' + game_str
                             else: # xc view args: need appoved grid, scale_x and scale_y
                                 scale = (5, 3) if doubled else (4, 4)
                                 if menu[page].fields[0].text == 'pointy-top':
@@ -127,26 +138,24 @@ def get_user_args():
                                 rows -= rows % 2
                                 as_hex = kernel.shape[0] != kernel.shape[1] 
                                 if cols >= 6 and rows >= 6: # declare grid, pad kernel
-                                    grid = np.random.random((cols, rows)).round()
-                                    after0 = (cols - kernel.shape[0]) // 2
-                                    before0 = cols - kernel.shape[0] - after0
-                                    after1 = (rows - kernel.shape[1]) // 2
-                                    before1 = rows - kernel.shape[1] - after1
-                                    kernel = np.pad(kernel, ((before0, after0), (before1, after1)))
-                                    print(f'kernel padding: ({before0}, {after0}), ({before1}, {after1})')
-                                    print(f'{kernel.shape= } / {grid.shape= }')
+                                    grid = np.zeros((cols, rows))
+                                    kernel = pad_to_fit(kernel, grid.shape)
                                     pg.display.quit()
-                                    return (grid, kernel, rule, scale[0], scale[1], as_hex)
+                                    return (game_str, grid, kernel, rule, scale[0], scale[1], as_hex)
         pg.display.update()
 
-def main(args:tuple[np.ndarray, np.ndarray, np.ndarray, int, int]):
-    grid, kernel, rule, scale_x, scale_y, as_hex = args
+def main(args:tuple[str, np.ndarray, np.ndarray, np.ndarray, int, int, bool]):
+    game_key, grid, kernel, rule, scale_x, scale_y, as_hex = args
+    if game_key.split(':')[0] in SEEDS: # has filename->check for special starting pattern (not random)
+        grid += pad_to_fit(SEEDS[game_key.split(':')[0]], grid.shape)
+    else:
+        grid = np.random.random(grid.shape).round() # randomize
+    game_key = FONT.render(game_key, 1, 'white', 'black')
+    game_key.set_alpha(128)
     rez = (grid.shape[0] * scale_x, grid.shape[1] * scale_y)
-    print(f'{rez= }')
-    # grid = np.random.random(shape).round()
     bg_img = make_bg(grid.shape, (scale_x, scale_y)) if as_hex else None
     win = pg.display.set_mode(rez, flags=pg.NOFRAME)
-    show(win, grid.astype(np.int64), bg_img)
+    show(win, grid.astype(np.int64), game_key, bg_img)
     clock = pg.time.Clock()
     autoflip = False
     running = True
@@ -160,7 +169,7 @@ def main(args:tuple[np.ndarray, np.ndarray, np.ndarray, int, int]):
                     cell = (event.pos[0] // scale_x, event.pos[1] // scale_y)
                     if not as_hex or (as_hex and cell[0] %2 == cell[1] % 2):
                         grid[cell] = abs(grid[cell] - 1)
-                        show(win, grid.astype(np.int64), bg_img)
+                        show(win, grid.astype(np.int64), game_key, bg_img)
                 case pg.KEYDOWN:
                     match event.key:                
                         case pg.K_q: # quit
@@ -169,7 +178,7 @@ def main(args:tuple[np.ndarray, np.ndarray, np.ndarray, int, int]):
                         case pg.K_c: # quit
                             if event.mod & pg.KMOD_CTRL:
                                 grid *= 0
-                                show(win, grid.astype(np.int64), bg_img)
+                                show(win, grid.astype(np.int64), game_key, bg_img)
                         case pg.K_n: # new game
                             if event.mod & pg.KMOD_CTRL:
                                 pg.display.quit()
@@ -178,15 +187,15 @@ def main(args:tuple[np.ndarray, np.ndarray, np.ndarray, int, int]):
                             if event.mod & pg.KMOD_CTRL: 
                                 autoflip = False
                                 grid = np.random.random(grid.shape).round()
-                                show(win, grid.astype(np.int64), bg_img)
+                                show(win, grid.astype(np.int64), game_key, bg_img)
                         case pg.K_SPACE:
                             autoflip = not autoflip
                         case pg.K_RIGHT:
                             grid = fft_flip(grid, kernel, rule)
-                            show(win, grid.astype(np.int64), bg_img)
+                            show(win, grid.astype(np.int64), game_key, bg_img)
         if autoflip: # advance 1 gen 
             grid = fft_flip(grid, kernel, rule) 
-            show(win, grid.astype(np.int64), bg_img)
+            show(win, grid.astype(np.int64), game_key, bg_img)
         pg.display.update()
 
 if __name__ == '__main__':

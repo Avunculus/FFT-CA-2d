@@ -1,6 +1,7 @@
 import hexonia as hx
 import pygame as pg
 import numpy as np
+from random import shuffle
 pg.font.init()
 pg.display.init()
 MAX_W, MAX_H = pg.display.get_desktop_sizes()[0]
@@ -23,6 +24,13 @@ RULE_CLASSIC = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0],
 STD_MASK = np.array([[1, 1, 1], # 'Moore' ngbhd
                      [1, 0, 1],
                      [1, 1, 1]])
+
+SEEDS = {'H-Trees'   : np.array([[1, 0, 1],
+                                 [0, 1, 0],
+                                 [1, 0, 1]]),
+         'Hexamoeba' : np.array([[0, 1, 0, 1, 0],
+                                 [1, 0, 1, 0, 1],
+                                 [0, 1, 0, 1, 0]])}
 
 # range=2
 # [0, 0, 1, 0, 1, 0, 1, 0, 0]
