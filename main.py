@@ -38,17 +38,21 @@ SAVES = {}
 with open('game-codes.txt', mode='r', encoding='utf-8') as sv:
     for line in sv.readlines():
         code, name = line.split('||')
-        SAVES[name.strip()] = code.casefold().strip()
+        name = name.strip()
+        code = code.casefold().strip()
+        SAVES[name] = code
 
 def get_user_args():
     # page 1: Game; page 2: View
     menu = (
-        Menu(TextField('game code', digits + 'XxQqVvMm,-GgNnBbSs', 'Gx,Nv1,B3,S2,3', 64),
-             ChoiceField('grid', ['hexagon', 'square']),
+        Menu(TextField('enter game code', digits + 'XxQqVvMm,-GgNnBbSs', 'Gx,Nv1,B3,S2,3', 64),
+             ChoiceField('load game', sorted(list(SAVES.keys()))),
+             ChoiceField('grid type', ['hexagon', 'square']),
              ChoiceField('neighborhood', ['VonNeuman', 'Moore']),
              TextField('neighbor range', digits, '1', 1),
-             TextField('birth', digits + ',-', '3', 64),
-             TextField('survival', digits + ',-', '2,3', 64)),
+             TextField('birth rule', digits + ',-', '3', 64),
+             TextField('survival rule', digits + ',-', '2,3', 64),
+             break_before=(1, 2)),
         Menu(ChoiceField('orientation', ['flat-top', 'pointy-top']),
              TextField('scale view', digits, '1', 2))
         ) # view scale (int) scales both xy for basis (4,4) [sq], (5,3) [hex-ft], (3,5) [hex-pt]
@@ -88,16 +92,22 @@ def get_user_args():
                                 return False
                         case pg.K_RETURN | pg.K_KP_ENTER:
                             if page == 0:
-                                if menu[page].fields.index(menu[page].focus) == 0: # full code
-                                    result = decode_game_string(menu[page].fields[0].text)
+                                if menu[page].fields.index(menu[page].focus) == 0: # from rulestring / code
+                                    game_str = menu[page].fields[0].text
+                                elif menu[page].fields.index(menu[page].focus) == 1: # from file
+                                    game_str = SAVES[menu[page].fields[1].text]
                                 else: # part-wise
-                                    result = decode_game_string(parts_to_code([r.text for r in menu[page].fields[1:]])) 
-                                if isinstance(result, tuple): # accept game args
+                                    game_str = parts_to_code([r.text for r in menu[page].fields[2:]])
+                                result = decode_game_string(game_str)
+                                if isinstance(result, tuple): # accepted game args
                                     kernel, rule = result
-                                    doubled = kernel.shape[0] != kernel.shape[1] 
+                                    doubled = kernel.shape[0] != kernel.shape[1]
                                     page = 1
                                     win = pg.display.set_mode(menu[page].size)
                                     menu[page].win = win
+                                    if not doubled:
+                                        menu[1].fields[0].choices.remove('pointy-top')
+                                    menu[page].report('Code: ' + game_str)
                                     menu[page].draw_all()
                             else: # xc view args: need appoved grid, scale_x and scale_y
                                 scale = (5, 3) if doubled else (4, 4)
@@ -147,6 +157,10 @@ def main(args:tuple[np.ndarray, np.ndarray, np.ndarray, int, int]):
                         case pg.K_q: # quit
                             if event.mod & pg.KMOD_CTRL:
                                 return False
+                        case pg.K_c: # quit
+                            if event.mod & pg.KMOD_CTRL:
+                                grid *= 0
+                                show(win, grid.astype(np.int64), bg_img)
                         case pg.K_n: # new game
                             if event.mod & pg.KMOD_CTRL:
                                 pg.display.quit()

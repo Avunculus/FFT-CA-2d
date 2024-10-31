@@ -7,8 +7,8 @@ MAX_W, MAX_H = pg.display.get_desktop_sizes()[0]
 BF = 4
 FH = 24
 FPS = 60
-FONT = font=pg.font.SysFont('couriernew', FH, bold=True)
-
+FONT = pg.font.SysFont('couriernew', FH, bold=True)
+FONT_SMALL = pg.font.SysFont('couriernew', 12, bold=True)
 COLORS = (pg.Color( 53,  53,  53), # cell @ 0
           pg.Color(219,  31, 187), # cell @ 1
           pg.Color(2,  31, 247), # font fg 1
