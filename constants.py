@@ -23,11 +23,6 @@ STD_MASK = np.array([[1, 1, 1], # 'Moore' ngbhd
                      [1, 0, 1],
                      [1, 1, 1]])
 
-# DBL_MASK_PT = np.array([[0, 1, 0],
-#                         [1, 0, 1],
-#                         [0, 0, 0],
-#                         [1, 0, 1],
-#                         [0, 1, 0]])
 # range=2
 # [0, 0, 1, 0, 1, 0, 1, 0, 0]
 # [0, 1, 0, 1, 0, 1, 0, 1, 0]
@@ -43,30 +38,10 @@ STD_MASK = np.array([[1, 1, 1], # 'Moore' ngbhd
 # [0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0]
 # [0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0]
 
-# 
-
-# (c, 0) (c, 2) ... 
-
-
-
 DBL_MASK_FT = np.array([[0, 1, 0, 1, 0], # = pt_mask.T
                         [1, 0, 0, 0, 1],
                         [0, 1, 0, 1, 0]])
 DBL_MASK_PT = DBL_MASK_FT.T
-
-def get_ngb_mask(shape:tuple, doubled:bool, ft:bool=True) -> np.ndarray:
-    m, n = shape
-    ngbs = np.zeros(shape)
-    if doubled:
-        if ft:
-            ngbs[m // 2 - 1 : m // 2 + 2, 
-                 n // 2 - 2 : n // 2 + 3] = DBL_MASK_FT
-        else:
-            ...
-    else:
-        ngbs[m // 2 - 1 : m // 2 + 2, 
-             n // 2 - 1 : n // 2 + 2] = STD_MASK
-    return ngbs
 
 def make_bg(shape:tuple, scale:tuple) -> pg.Surface:
     m, n = shape
@@ -83,32 +58,93 @@ def make_bg(shape:tuple, scale:tuple) -> pg.Surface:
     bg = pg.transform.scale(bg, (m * scale[0], n * scale[1]))
     return bg
 
-class ArgField(pg.Rect):
-    def __init__(self, xy_ofset:tuple[int,int], init_val:str, font:pg.font.Font, arg_name:str, colors:tuple[pg.Color,pg.Color]):
-        fg, bg = colors
-        name = f'{arg_name:>18}: '
-        label = font.render(name, 1, fg, bg)
-        super().__init__(xy_ofset[0], xy_ofset[1], 2 * label.get_width(), label.get_height())
-        self.label = label
-        self.font = font
-        self.name = arg_name
-        self.default_val = init_val
-        self.arg_val = init_val
-        self.fg = fg
-        self.bg = bg
-        self.field = pg.Rect(self.centerx, self.top, self.width / 2, self.height)
-    def collidepoint(self, x_y:tuple) -> bool:
-        if self.field.collidepoint(x_y):
-            return True
+def parts_to_code(text:list[str]) -> str:
+    code = 'G'
+    code += 'x,N' if text[0] == 'hexagon' else 'q,N'
+    code += 'v' if text[1] =='VonNeuman' else 'm'
+    code += text[2] + ',B' + text[3] + ',S' + text[4]
+    return code
+
+
+def decode_game_string(code:str) -> tuple[np.ndarray,np.ndarray]:
+    """Returns: 2-tuple of arrays:: [0]: kernel/ngb mask (c, r); [1]: rule array (2, n)"""
+    # in: key is decimal or in 'xqvm,-gnbs'
+    code = code.casefold().replace(' ', '')
+    # each key once
+    for key in 'gnbs':
+        if code.count(key) != 1:
+            print(f'game string code error: \'{key}\' present {code.count(key)} times') 
+            return False
+    # keys in order
+    if not code.index('g') < code.index('n') < code.index('b') < code.index('s'):
+        print(f'error: game code string args out of order: \'{code})\'')
         return False
-    def reset_val(self) -> None:
-        self.arg_val = self.default_val
-    def add_char(self, num_char:str):
-        self.arg_val += num_char
-        self.arg_val = repr(int(self.arg_val)) # clear leading zeros
-    def del_char(self):
-        self.arg_val = '0' if len(self.arg_val) == 1 else self.arg_val[: -1]
-    def draw(self, sfc:pg.Surface, target:bool) -> None:
-        sfc.fill(self.bg, self)
-        sfc.fill('purple', self.field) if not target else sfc.fill('yellow', self.field)
-        sfc.blits([(self.label, self.topleft), (self.font.render(self.arg_val, 1, self.fg), self.field.topleft)])
+    # EX: 'gx,nv2,b1,2,4-8,s10-11,13'
+    grid, ngbhd, b_s = code.split(',', maxsplit=2)
+    ngbhd, scope = (ngbhd[1], int(ngbhd[2:])) # ngbhd='v' or 'm'
+    # kernel.shape, kernel.values, rule.shape
+    match grid[-1]:
+        case 'q':
+            kernel = np.ones((2 * scope + 1,
+                              2 * scope + 1))
+            kernel[scope, scope] = 0
+            if ngbhd == 'm': # square moore ngbhd: adj + diag
+                rule = np.zeros((2, kernel.size))
+            elif ngbhd == 'v': # square vn 
+                rule = np.zeros((2, 2 * scope * (scope + 1) + 1))
+                with np.nditer(kernel, flags=['multi_index'], op_flags=['readwrite']) as it:
+                    for _ in it:
+                        if abs(scope - it.multi_index[0]) + abs(scope - it.multi_index[1]) > scope:
+                            kernel[it.multi_index] = 0 
+            else: return False
+        case 'x':
+            if ngbhd == 'v': # hex vn 
+                shape = (1 + 2 * scope, 1 + 4 * scope)
+                kernel = np.zeros(shape) # default flat-top hexes. For pt, use k.T
+                origin = shape[0] // 2
+                for q in range(scope): # center line: omit target (center cell)
+                    kernel[origin, 2 * q] = 1
+                    kernel[origin, -1 - 2 * q] = 1
+                for ofst in range(1, scope + 1): # lines above & below
+                    line = np.array([1, 0] * (shape[0]-ofst))
+                    kernel[origin - ofst, ofst: ofst + line.size] = line
+                    kernel[origin + ofst, ofst: ofst + line.size] = line
+                rule = np.zeros((2, 3 * scope * (scope + 1) + 1))
+            elif ngbhd == 'm':
+                print('error: \'m\' (Moore) neighborhood requested for hex grid')
+                return False
+            else: return False
+        case _: print('error: invalid grid type'); return False
+    # rule.values
+    for i, line in enumerate(b_s[1:].split(',s')):
+        for ix in line.split(',') if ',' in line else [line]:
+            if ix:
+                if '-' not in ix:
+                    ix = int(ix)
+                    if ix > rule.shape[1] - 1:
+                        print(f'error: rule out of bounds: index = {ix}, {rule.shape[1]= }')
+                        return False
+                    else:
+                        rule[i, ix] = 1
+                else:
+                    lo, hi = [int(j) for j in ix.split('-')]
+                    if int(hi) > rule.shape[1] - 1:
+                        print(f'error: rule out of bounds: index = {hi}, {rule.shape[1]= }')
+                        return False
+                    else:
+                        rule[i, int(lo) : int(hi) + 1] = 1
+    return (kernel, rule)
+
+# def get_ngb_mask(shape:tuple, doubled:bool, ft:bool=True) -> np.ndarray:
+#     m, n = shape
+#     ngbs = np.zeros(shape)
+#     if doubled:
+#         if ft:
+#             ngbs[m // 2 - 1 : m // 2 + 2, 
+#                  n // 2 - 2 : n // 2 + 3] = DBL_MASK_FT
+#         else:
+#             ...
+#     else:
+#         ngbs[m // 2 - 1 : m // 2 + 2, 
+#              n // 2 - 1 : n // 2 + 2] = STD_MASK
+#     return ngbs

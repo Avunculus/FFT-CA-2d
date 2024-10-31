@@ -51,7 +51,6 @@ class Menu(pg.Rect):
         self.feedback = ['', '']
         self.msg_area = pg.Rect(self.fields[-1].bottomleft, (self.w, self.h - self.fields[-1].bottom))
         self.win:pg.Surface = None
-    
     def reset_field(self) -> None:
         self.focus.reset()
         self.update_fields()
@@ -90,7 +89,6 @@ class Menu(pg.Rect):
             self.focus.add_char(char)
         self.update_fields()
 
-
 # def get_user_args():
 #     """
 #     From: system (display dimensions) & user text input 
@@ -122,88 +120,3 @@ class Menu(pg.Rect):
     # defaults = [str(1920 // 5), str(1080 // 3), '5', '3', '1']
 
     # ui = {arg_name: ArgField((12, 12 + i * FH), defaults[i], font, arg_name, COLORS[-2 :]) for i, arg_name in enumerate(names)}
-
-    # target = 'scale_x'
-    # [r.draw(win, n==target) for n, r in ui.items()]
-    # clock = pg.time.Clock()
-    # running = True
-    # while running :
-    #     clock.tick(FPS)
-    #     for event in pg.event.get():
-    #         match event.type:
-    #             case pg.QUIT:
-    #                 return False
-    #             case pg.TEXTINPUT:
-    #                 if event.text.isnumeric() and target:
-    #                     ui[target].add_char(event.text)
-    #                     [r.draw(win, n==target) for n, r in ui.items()]
-    #             case pg.MOUSEBUTTONDOWN:
-    #                 target = ''
-    #                 for key in [n for n, r in ui.items() if r.collidepoint(event.pos)]:
-    #                     target = key
-    #                 [r.draw(win, n==target) for n, r in ui.items()]
-    #             case pg.KEYDOWN:
-    #                 match event.key:
-    #                     case pg.K_UP:
-    #                         target = names[names.index(target) - 1]
-    #                         [r.draw(win, n==target) for n, r in ui.items()]
-    #                     case pg.K_DOWN:
-    #                         target = names[(names.index(target) + 1) % len(names)]
-    #                         [r.draw(win, n==target) for n, r in ui.items()]
-    #                     case pg.K_ESCAPE:
-    #                         if target:
-    #                             ui[target].arg_val = '0'
-    #                             [r.draw(win, n==target) for n, r in ui.items()]
-    #                     case pg.K_BACKSPACE:
-    #                         if target:
-    #                             ui[target].del_char()
-    #                             [r.draw(win, n==target) for n, r in ui.items()]
-    #                     case pg.K_q:
-    #                         if event.mod & pg.KMOD_CTRL:
-    #                             return False
-    #                     case pg.K_RETURN | pg.K_KP_ENTER:
-    #                         cols, rows, scale_x, scale_y, doubled = [types[names.index(n)](r.arg_val) for n, r in ui.items()]
-    #                         doubled = bool(doubled)
-    #                         disp_w, disp_h = pg.display.get_desktop_sizes()[0]  # check fit to display max
-    #                         if cols >= 6 and cols * scale_x <= disp_w and rows >= 6 and rows * scale_y <= disp_h: # min 6x6
-    #                             if doubled:
-    #                                 cols -= cols % 2 # chck even #s?
-    #                                 rows -= rows % 2
-    #                             pg.display.quit()
-    #                             return (cols, rows, scale_x, scale_y, doubled)
-    #     pg.display.update()
-
-
-#     clock = pg.time.Clock()
-#     autoflip = False
-#     running = True
-
-#     while running:
-#         clock.tick(FPS)
-#         for event in pg.event.get():
-#             match event.type:
-#                 case pg.QUIT:
-#                     return False
-#                 case pg.KEYDOWN:
-#                     match event.key:                
-#                         case pg.K_q: # quit
-#                             if event.mod & pg.KMOD_CTRL:
-#                                 return False
-#                         case pg.K_n: # new grid
-#                             if event.mod & pg.KMOD_CTRL:
-#                                 pg.display.quit()
-#                                 return True
-#                         case pg.K_r: # re-set, randomize
-#                             if event.mod & pg.KMOD_CTRL: 
-#                                 autoflip = False
-#                                 grid = np.random.random(shape).round()
-#                                 show(win, grid.astype(np.int64), bg_img)
-#                         case pg.K_SPACE:
-#                             autoflip = not autoflip
-#                         case pg.K_RIGHT:
-#                             grid = fft_flip(grid, ngbs, rule)
-#                             show(win, grid.astype(np.int64), bg_img)
-#         if autoflip: # advance 1 gen 
-#             grid = fft_flip(grid, ngbs, rule) 
-#             show(win, grid.astype(np.int64), bg_img)
-#         pg.display.update()

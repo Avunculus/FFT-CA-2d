@@ -1,5 +1,4 @@
 from constants import *
-from tools import * 
 from gui import *
 from string import digits
 
@@ -37,7 +36,6 @@ def show(sfc:pg.Surface, cells:np.ndarray, bg_image:pg.Surface=None) -> None:
 
 def get_user_args():
     # page 1: Game; page 2: View
-    ## declare page sfc, populate / draw
     menu = (
         Menu(TextField('game code', digits + 'XxQqVvMm,-GgNnBbSs', 'Gx,Nv1,B3,S2,3', 64),
              ChoiceField('grid', ['hexagon', 'square']),
@@ -47,8 +45,7 @@ def get_user_args():
              TextField('survival', digits + ',-', '2,3', 64)),
         Menu(ChoiceField('orientation', ['flat-top', 'pointy-top']),
              TextField('scale view', digits, '1', 2))
-        )
-    # view scale (int) scales both xy for basis (4,4) [sq], (5,3) [hex-ft], (3,5) [hex-pt]
+        ) # view scale (int) scales both xy for basis (4,4) [sq], (5,3) [hex-ft], (3,5) [hex-pt]
     page = 0
     win = pg.display.set_mode(menu[page].size)
     menu[page].win = win
@@ -120,9 +117,7 @@ def get_user_args():
                                     return (grid, kernel, rule, scale[0], scale[1], as_hex)
         pg.display.update()
 
-
 def main(args:tuple[np.ndarray, np.ndarray, np.ndarray, int, int]):
-
     grid, kernel, rule, scale_x, scale_y, as_hex = args
     rez = (grid.shape[0] * scale_x, grid.shape[1] * scale_y)
     print(f'{rez= }')
