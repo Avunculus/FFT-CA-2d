@@ -34,6 +34,12 @@ def show(sfc:pg.Surface, cells:np.ndarray, bg_image:pg.Surface=None) -> None:
     if bg_image: # top layer to cover dbld
         sfc.blit(bg_image, (0, 0))
 
+SAVES = {}
+with open('game-codes.txt', mode='r', encoding='utf-8') as sv:
+    for line in sv.readlines():
+        code, name = line.split('||')
+        SAVES[name.strip()] = code.casefold().strip()
+
 def get_user_args():
     # page 1: Game; page 2: View
     menu = (
@@ -56,6 +62,8 @@ def get_user_args():
         clock.tick(FPS)
         for event in pg.event.get():
             match event.type:
+                case pg.QUIT:
+                    return False
                 case pg.TEXTINPUT:
                     menu[page].add_char(event.text)
                 case pg.MOUSEBUTTONDOWN:
