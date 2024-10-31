@@ -100,35 +100,3 @@ class Menu(pg.Rect):
         if isinstance(self.focus, TextField):
             self.focus.add_char(char)
         self.update_fields()
-
-# def get_user_args():
-#     """
-#     From: system (display dimensions) & user text input 
-#     Returns: (cols: int, rows: int, scale_x: int, scale_y: int, doubled: bool)
-#     """
-    # for update:
-    # FIELD           VAL_RANGE                       DEFAULT                         DEPEND.
-    # =============   ==========================      ==========================      =======================================
-    # grid_type       square, hex_ft, hex_pt          hex_ft                          --
-
-    # grid_shape      hex: ([6->D.w], [6->D.h])       hex_ft: (D.w//5, D.h//3)        grid_type, D.w, D.h
-    #                 sq:  ([3->D.w], [3->D.h])       hex_pt: (D.w//3, D.h//5)    
-
-    # scale           min = (1, 1)                    hex_ft: (5, 3); hex_pt: (3, 5)  grid_shape, grid_type, D.w, D.h 
-    #                 max = D.w//cols, D.h//rows      square: (4, 4)
-
-    # hood_type       VonNeuman (adj. ngbs only),     hex: VonNeuman (required)       grid_type
-    #                 Moore (adj. and diag. ngbs)     square: Moore (can be either)
-
-    # hood_magnitude  int [1->min([D.w, D.h])//2]     1                               D.w, D.h
-
-    # rule            shape = (2, hood_size + 1)      B3/S23                          hood_mag., hood_type, etc.
-    #                 val_range = 0|1
-    
-    # win  = pg.display.set_mode((960, 540), flags=pg.NOFRAME)
-    # font = pg.font.SysFont('couriernew', FH, bold=True)
-    # names    = ['cols', 'rows', 'scale_x', 'scale_y', 'doubled']
-    # types =    [ int     ,  int     ,  int  ,  int  ,  int    ]
-    # defaults = [str(1920 // 5), str(1080 // 3), '5', '3', '1']
-
-    # ui = {arg_name: ArgField((12, 12 + i * FH), defaults[i], font, arg_name, COLORS[-2 :]) for i, arg_name in enumerate(names)}

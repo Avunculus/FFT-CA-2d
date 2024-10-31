@@ -19,9 +19,6 @@ def fft_flip(cells:np.ndarray, kernel:np.ndarray, rule:np.ndarray) -> np.ndarray
     for i in np.nonzero(rule[1, :]):
         for j in i:
             new_cells[np.where((ngb_sum == j) & (cells == 1))] = 1
-    # new_cells[np.where((ngb_sum == 2) & (cells == 1))] = 1
-    # new_cells[np.where((ngb_sum == 3) & (cells == 1))] = 1
-    # new_cells[np.where((ngb_sum == 3) & (cells == 0))] = 1
     return new_cells
 
 def show(sfc:pg.Surface, cells:np.ndarray, game_key:pg.Surface, bg_image:pg.Surface=None) -> None:

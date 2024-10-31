@@ -32,6 +32,7 @@ SEEDS = {'H-Trees'   : np.array([[1, 0, 1],
                                  [1, 0, 1, 0, 1],
                                  [0, 1, 0, 1, 0]])}
 
+# Hex neighborhoods (flat-top)
 # range=2
 # [0, 0, 1, 0, 1, 0, 1, 0, 0]
 # [0, 1, 0, 1, 0, 1, 0, 1, 0]
@@ -143,17 +144,3 @@ def decode_game_string(code:str) -> tuple[np.ndarray,np.ndarray]:
                     else:
                         rule[i, int(lo) : int(hi) + 1] = 1
     return (kernel, rule)
-
-# def get_ngb_mask(shape:tuple, doubled:bool, ft:bool=True) -> np.ndarray:
-#     m, n = shape
-#     ngbs = np.zeros(shape)
-#     if doubled:
-#         if ft:
-#             ngbs[m // 2 - 1 : m // 2 + 2, 
-#                  n // 2 - 2 : n // 2 + 3] = DBL_MASK_FT
-#         else:
-#             ...
-#     else:
-#         ngbs[m // 2 - 1 : m // 2 + 2, 
-#              n // 2 - 1 : n // 2 + 2] = STD_MASK
-#     return ngbs

@@ -2,4 +2,4 @@ dbg.py
 house.env
 report.txt
 xyz.py
-__pycache__
+__pycache__/
