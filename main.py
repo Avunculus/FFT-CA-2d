@@ -42,6 +42,10 @@ with open('game-codes.txt', mode='r', encoding='utf-8') as sv:
         code = code.casefold().strip()
         SAVES[name] = code
 
+EVENTS = [pg.TEXTINPUT, pg.QUIT, pg.KEYDOWN, pg.MOUSEBUTTONDOWN]
+pg.event.set_blocked(None)
+pg.event.set_allowed(EVENTS)
+
 def get_user_args():
     # page 1: Game; page 2: View
     menu = (
@@ -152,6 +156,11 @@ def main(args:tuple[np.ndarray, np.ndarray, np.ndarray, int, int]):
             match event.type:
                 case pg.QUIT:
                     return False
+                case pg.MOUSEBUTTONDOWN:
+                    cell = (event.pos[0] // scale_x, event.pos[1] // scale_y)
+                    if not as_hex or (as_hex and cell[0] %2 == cell[1] % 2):
+                        grid[cell] = abs(grid[cell] - 1)
+                        show(win, grid.astype(np.int64), bg_img)
                 case pg.KEYDOWN:
                     match event.key:                
                         case pg.K_q: # quit
