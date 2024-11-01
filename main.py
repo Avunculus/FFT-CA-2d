@@ -174,7 +174,7 @@ def main(args:tuple[str, np.ndarray, np.ndarray, np.ndarray, int, int, bool]):
                         case pg.K_q: # quit
                             if event.mod & pg.KMOD_CTRL:
                                 return False
-                        case pg.K_c: # quit
+                        case pg.K_c: # clear grid
                             if event.mod & pg.KMOD_CTRL:
                                 grid *= 0
                                 show(win, grid.astype(np.int64), game_key, bg_img)
