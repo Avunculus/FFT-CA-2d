@@ -25,7 +25,24 @@ STD_MASK = np.array([[1, 1, 1], # 'Moore' ngbhd
                      [1, 0, 1],
                      [1, 1, 1]])
 
-SEEDS = {'H-Trees'   : np.array([[1, 0, 1],
+PSEUDO_HEX = np.array([[0, 1, 1],
+                       [1, 0, 1],
+                       [1, 1, 0]])
+
+def sprinkle(seed_count:int, area:tuple[int,int]) -> np.ndarray:
+    if area[0] * area[1] < seed_count:
+        print(f'error: seed count too big ({seed_count= } // {area= }')
+        return False
+    kernel = [1] * seed_count + [0] * (area[0] * area[1] - seed_count)
+    shuffle(kernel)
+    kernel = np.array(kernel).reshape(area)
+    return kernel
+
+HEXTEST = {'HexTest' : PSEUDO_HEX}
+
+SEEDS = {'Blocks'    : sprinkle(81, (200, 200)),
+         'Contained Chaos' : np.concatenate([sprinkle(12, (8, 8)), np.zeros((96, 8)), sprinkle(12, (8, 8))], axis=0),
+         'H-Trees'   : np.array([[1, 0, 1],
                                  [0, 1, 0],
                                  [1, 0, 1]]),
          'Hexamoeba' : np.array([[0, 1, 0, 1, 0],

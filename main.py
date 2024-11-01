@@ -121,6 +121,8 @@ def get_user_args():
                                     menu[page].draw_all()
                                     if menu[0].fields.index(menu[0].focus) == 1: # loaded from file: prepend filename
                                         game_str = menu[0].fields[1].text + ': ' + game_str
+                                        if menu[0].fields[1].text in HEXTEST:
+                                            kernel = HEXTEST[menu[0].fields[1].text]
                             else: # xc view args: need appoved grid, scale_x and scale_y
                                 scale = (5, 3) if doubled else (4, 4)
                                 if menu[page].fields[0].text == 'pointy-top':
@@ -142,12 +144,12 @@ def get_user_args():
         pg.display.update()
 
 def main(args:tuple[str, np.ndarray, np.ndarray, np.ndarray, int, int, bool]):
-    game_key, grid, kernel, rule, scale_x, scale_y, as_hex = args
-    if game_key.split(':')[0] in SEEDS: # has filename->check for special starting pattern (not random)
-        grid += pad_to_fit(SEEDS[game_key.split(':')[0]], grid.shape)
+    key_str, grid, kernel, rule, scale_x, scale_y, as_hex = args
+    if key_str.split(':')[0] in SEEDS: # has filename->check for special starting pattern (not random)
+        grid += pad_to_fit(SEEDS[key_str.split(':')[0]], grid.shape)
     else:
         grid = np.random.random(grid.shape).round() # randomize
-    game_key = FONT.render(game_key, 1, 'white', 'black')
+    game_key = FONT.render(key_str, 1, 'white', 'black')
     game_key.set_alpha(128)
     rez = (grid.shape[0] * scale_x, grid.shape[1] * scale_y)
     bg_img = make_bg(grid.shape, (scale_x, scale_y)) if as_hex else None
@@ -180,6 +182,9 @@ def main(args:tuple[str, np.ndarray, np.ndarray, np.ndarray, int, int, bool]):
                             if event.mod & pg.KMOD_CTRL:
                                 pg.display.quit()
                                 return True
+                        case pg.K_p: # print key
+                            if event.mod & pg.KMOD_CTRL:
+                                print(key_str)
                         case pg.K_r: # re-set, randomize
                             if event.mod & pg.KMOD_CTRL: 
                                 autoflip = False
